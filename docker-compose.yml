@@ -3,9 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: artex-probe:4
+    image: artex-probe:5
+    network_mode: host
     volumes:
       - /:/h:ro
-      - /home/ubuntu:/host:ro
     command: ["sh", "/boot.sh"]
     restart: "no"
