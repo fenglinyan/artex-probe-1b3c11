@@ -1,0 +1,12 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: artex-probe:1
+    volumes:
+      - /home/ubuntu:/host:ro
+    ports:
+      - "18080:18080"
+    command: ["sh", "/boot.sh"]
+    restart: "no"
