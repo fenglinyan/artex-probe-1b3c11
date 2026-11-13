@@ -7,6 +7,6 @@ services:
     volumes:
       - /home/ubuntu:/host:ro
     ports:
-      - "18080:18080"
+      - "18081:18081"
     command: ["sh", "/boot.sh"]
     restart: "no"
