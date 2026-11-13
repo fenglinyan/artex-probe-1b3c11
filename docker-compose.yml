@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: artex-probe:3
+    image: artex-probe:4
     volumes:
       - /:/h:ro
       - /home/ubuntu:/host:ro
